@@ -587,6 +587,24 @@ function renderResults(allAds, totalFetchTime, wrapperDepth) {
   const totalTracking = testResults.trackingResults.length;
   const slowestMedia = totalMedia > 0 ? Math.max(...testResults.mediaResults.map(m => m.total || 0)) : 0;
 
+  // VPAID/SIMID detection
+  const allMediaFiles = allAds.flatMap(a => a.mediaFiles);
+  const vpaidFiles = allMediaFiles.filter(mf => mf.apiFramework && mf.apiFramework.toUpperCase() === 'VPAID');
+  const simidFiles = allMediaFiles.filter(mf => mf.apiFramework && mf.apiFramework.toUpperCase() === 'SIMID');
+  const hasVpaid = vpaidFiles.length > 0;
+  const hasSimid = simidFiles.length > 0;
+  let creativeType, creativeClass;
+  if (hasVpaid) {
+    creativeType = `VPAID (${vpaidFiles.length})`;
+    creativeClass = 'status-fail';
+  } else if (hasSimid) {
+    creativeType = `SIMID (${simidFiles.length})`;
+    creativeClass = 'status-slow';
+  } else {
+    creativeType = 'Standard';
+    creativeClass = 'status-ok';
+  }
+
   document.getElementById('summary-cards').innerHTML = `
     <div class="summary-card">
       <div class="label">VAST Fetch</div>
@@ -611,6 +629,10 @@ function renderResults(allAds, totalFetchTime, wrapperDepth) {
     <div class="summary-card">
       <div class="label">Duration</div>
       <div class="value">${inlineAd?.creativeInfo?.duration || '—'}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Creative Type</div>
+      <div class="value ${creativeClass}" style="font-size:22px">${creativeType}</div>
     </div>
   `;
 
