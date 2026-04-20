@@ -146,6 +146,19 @@
   .ima-btn-play:hover { background: #388bfd; }
   .ima-status { font-size: 12px; color: #8b949e; margin-left: 8px; }
   .ima-note { font-size: 11px; color: #484f58; margin-top: 8px; line-height: 1.5; }
+
+  /* Tracking domain map */
+  .domain-map { padding: 20px; }
+  .domain-map-canvas { width: 100%; min-height: 300px; background: #0d1117; border-radius: 6px; overflow: hidden; position: relative; }
+  .domain-map svg { width: 100%; height: 100%; }
+  .domain-node { cursor: default; }
+  .domain-node circle { transition: r 0.2s; }
+  .domain-node:hover circle { filter: brightness(1.3); }
+  .domain-node text { fill: #e1e4e8; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: none; }
+  .domain-link { stroke-opacity: 0.4; }
+  .domain-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; padding: 0 4px; }
+  .domain-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8b949e; }
+  .domain-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 </style>
 </head>
 <body>
@@ -195,13 +208,12 @@
     <div id="media-section"></div>
     <div id="tracking-section"></div>
     <div id="companion-section"></div>
+    <div id="tracking-map-section"></div>
     <div id="vast-overview-section"></div>
   </div>
 
   <div class="footer">
-   Flunkr - VAST/VPAID Diagnostics Tool &mdash; Internal Tool by Alex Milkis.
-   <br>
-    &copy; 2026 Taboola. All rights reserved.
+    &copy; 2026 Taboola. All rights reserved. Flunkr - VAST/VPAID Diagnostics Tool &mdash; Internal Tool by Alex Milkis.
   </div>
 </div>
 
@@ -628,6 +640,9 @@ function renderResults(allAds, totalFetchTime, wrapperDepth) {
     renderCompanionTable();
   }
 
+  // Tracking domain map
+  renderTrackingDomainMap(allAds);
+
   // VAST overview
   renderVastOverview(allAds);
 }
@@ -739,6 +754,158 @@ function renderCompanionTable() {
   document.getElementById('companion-section').innerHTML = html;
 }
 
+function renderTrackingDomainMap(allAds) {
+  // Collect all URLs by category
+  const urlEntries = [];
+  allAds.forEach(ad => {
+    ad.impressions.forEach(u => urlEntries.push({ url: u, type: 'impression' }));
+    ad.trackingEvents.forEach(t => urlEntries.push({ url: t.url, type: t.event }));
+    ad.errors.forEach(u => urlEntries.push({ url: u, type: 'error' }));
+    ad.mediaFiles.forEach(m => urlEntries.push({ url: m.url, type: 'media' }));
+    ad.companions.filter(c => c.url).forEach(c => urlEntries.push({ url: c.url, type: 'companion' }));
+  });
+
+  if (urlEntries.length === 0) {
+    document.getElementById('tracking-map-section').innerHTML = '';
+    return;
+  }
+
+  // Group by domain
+  const domainMap = {};
+  const categories = new Set();
+  urlEntries.forEach(entry => {
+    try {
+      const domain = new URL(entry.url).hostname;
+      if (!domainMap[domain]) domainMap[domain] = { domain, types: {}, count: 0 };
+      const cat = categorizeEvent(entry.type);
+      domainMap[domain].types[cat] = (domainMap[domain].types[cat] || 0) + 1;
+      domainMap[domain].count++;
+      categories.add(cat);
+    } catch(e) {}
+  });
+
+  const domains = Object.values(domainMap).sort((a, b) => b.count - a.count);
+  if (domains.length === 0) return;
+
+  const categoryColors = {
+    'Impression': '#1f6feb',
+    'Quartile': '#a371f7',
+    'Click': '#f0883e',
+    'Media': '#3fb950',
+    'Companion': '#79c0ff',
+    'Error': '#f85149',
+    'Other': '#8b949e'
+  };
+
+  // Build SVG force-directed-like layout
+  const width = 800;
+  const height = Math.max(350, domains.length * 28);
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  // The VAST tag is the center node
+  const maxCount = Math.max(...domains.map(d => d.count));
+
+  // Position domains in a radial layout
+  const nodes = domains.map((d, i) => {
+    const angle = (2 * Math.PI * i) / domains.length - Math.PI / 2;
+    const radiusBase = Math.min(width, height) * 0.35;
+    // Larger count = closer to center
+    const distanceFactor = 0.5 + 0.5 * (1 - d.count / maxCount);
+    const r = radiusBase * distanceFactor + 40;
+    return {
+      ...d,
+      x: centerX + r * Math.cos(angle),
+      y: centerY + r * Math.sin(angle),
+      radius: Math.max(8, Math.min(30, 6 + d.count * 2)),
+      primaryType: Object.entries(d.types).sort((a, b) => b[1] - a[1])[0][0]
+    };
+  });
+
+  // Build SVG
+  let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="2" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  // Center node (VAST Tag)
+  svg += `<circle cx="${centerX}" cy="${centerY}" r="22" fill="#161b22" stroke="#1f6feb" stroke-width="2" filter="url(#glow)"/>`;
+  svg += `<text x="${centerX}" y="${centerY + 1}" text-anchor="middle" dominant-baseline="middle" fill="#1f6feb" font-size="10" font-weight="600" font-family="-apple-system, sans-serif">VAST</text>`;
+
+  // Links from center to each domain
+  nodes.forEach(node => {
+    const color = categoryColors[node.primaryType] || categoryColors['Other'];
+    // Draw multiple lines for multiple event types (stacked, slight offset)
+    const types = Object.entries(node.types).sort((a, b) => b[1] - a[1]);
+    types.forEach(([ type, count ], ti) => {
+      const offset = (ti - (types.length - 1) / 2) * 1.5;
+      const opacity = Math.max(0.15, 0.6 - ti * 0.15);
+      const strokeWidth = Math.max(1, Math.min(4, count * 0.5));
+      const c = categoryColors[type] || categoryColors['Other'];
+      svg += `<line class="domain-link" x1="${centerX}" y1="${centerY}" x2="${node.x}" y2="${node.y + offset}" stroke="${c}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"/>`;
+    });
+  });
+
+  // Domain nodes
+  nodes.forEach(node => {
+    const color = categoryColors[node.primaryType] || categoryColors['Other'];
+    svg += `<g class="domain-node">`;
+    svg += `<circle cx="${node.x}" cy="${node.y}" r="${node.radius}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="1.5"/>`;
+    svg += `<text x="${node.x}" y="${node.y - node.radius - 5}" text-anchor="middle" fill="#e1e4e8" font-size="10" font-family="-apple-system, sans-serif">${escapeHtml(node.domain)}</text>`;
+    svg += `<text x="${node.x}" y="${node.y + 4}" text-anchor="middle" fill="${color}" font-size="11" font-weight="600" font-family="-apple-system, sans-serif">${node.count}</text>`;
+    svg += `</g>`;
+  });
+
+  svg += `</svg>`;
+
+  // Legend
+  let legendHtml = '<div class="domain-legend">';
+  Object.entries(categoryColors).forEach(([cat, color]) => {
+    if (categories.has(cat) || cat === 'Media' || cat === 'Impression') {
+      legendHtml += `<div class="domain-legend-item"><div class="domain-legend-dot" style="background:${color}"></div>${cat}</div>`;
+    }
+  });
+  legendHtml += '</div>';
+
+  // Domain summary table
+  let tableHtml = `<table style="margin-top:16px"><thead><tr><th>Domain</th><th>Calls</th><th>Types</th></tr></thead><tbody>`;
+  domains.forEach(d => {
+    const typeTags = Object.entries(d.types).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
+      const c = categoryColors[type] || categoryColors['Other'];
+      return `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:${c}22;color:${c};border:1px solid ${c}44;margin:1px 3px">${type} (${count})</span>`;
+    }).join('');
+    tableHtml += `<tr><td class="url-cell">${escapeHtml(d.domain)}</td><td>${d.count}</td><td>${typeTags}</td></tr>`;
+  });
+  tableHtml += `</tbody></table>`;
+
+  const html = `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-title">Tracking Domain Map <span class="section-badge">${domains.length} domain(s) · ${urlEntries.length} call(s)</span></span>
+    </div>
+    <div class="section-body">
+      <div class="domain-map">
+        <div class="domain-map-canvas">${svg}</div>
+        ${legendHtml}
+        ${tableHtml}
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('tracking-map-section').innerHTML = html;
+}
+
+function categorizeEvent(type) {
+  if (!type) return 'Other';
+  const t = type.toLowerCase();
+  if (t === 'impression') return 'Impression';
+  if (t === 'start' || t === 'firstquartile' || t === 'midpoint' || t === 'thirdquartile' || t === 'complete' || t === 'started') return 'Quartile';
+  if (t.includes('click')) return 'Click';
+  if (t === 'media') return 'Media';
+  if (t === 'companion') return 'Companion';
+  if (t === 'error') return 'Error';
+  return 'Other';
+}
+
 function renderVastOverview(allAds) {
   let html = `<div class="section"><div class="section-header" onclick="toggleSection(this)"><span class="section-title">VAST Structure <span class="section-badge">${allAds.length} ad(s)</span></span></div><div class="section-body collapsed"><div class="vast-tree">`;
 
@@ -804,12 +971,12 @@ function renderPlayer(allAds) {
     <div class="section-body">
       <div class="player-container">
         <div class="player-mode-tabs">
-          ${hasMedia ? '<button class="player-mode-tab active" data-mode="direct" onclick="switchPlayerMode(this)">Direct Player</button>' : ''}
-          <button class="player-mode-tab ${hasMedia ? '' : 'active'}" data-mode="ima" onclick="switchPlayerMode(this)">IMA SDK Player</button>
+          ${hasMedia ? '<button class="player-mode-tab" data-mode="direct" onclick="switchPlayerMode(this)">Direct Player</button>' : ''}
+          <button class="player-mode-tab active" data-mode="ima" onclick="switchPlayerMode(this)">IMA SDK Player</button>
         </div>
 
         <!-- Direct Player Mode -->
-        ${hasMedia ? `<div id="player-direct" class="player-mode-content active">
+        ${hasMedia ? `<div id="player-direct" class="player-mode-content">
           <div class="player-wrapper">
             <div class="player-video-area">
               <video id="vast-player" controls preload="auto" crossorigin="anonymous">
@@ -827,7 +994,7 @@ function renderPlayer(allAds) {
         </div>` : ''}
 
         <!-- IMA SDK Player Mode -->
-        <div id="player-ima" class="player-mode-content ${hasMedia ? '' : 'active'}">
+        <div id="player-ima" class="player-mode-content active">
           <div class="player-wrapper">
             <div class="player-video-area">
               <div class="ima-player-wrap" id="ima-player-wrap">
@@ -1127,6 +1294,7 @@ function clearResults() {
   document.getElementById('media-section').innerHTML = '';
   document.getElementById('tracking-section').innerHTML = '';
   document.getElementById('companion-section').innerHTML = '';
+  document.getElementById('tracking-map-section').innerHTML = '';
   document.getElementById('vast-overview-section').innerHTML = '';
   clearErrors();
   hideProgress();
