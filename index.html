@@ -159,7 +159,9 @@
   .player-mode-tab:first-child { border-radius: 5px 0 0 5px; }
   .player-mode-tab:last-child { border-radius: 0 5px 5px 0; }
   .player-mode-tab.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-  .player-mode-tab:hover:not(.active) { color: #e1e4e8; background: #21262d; }
+  .player-mode-tab:hover:not(.active):not(:disabled) { color: #e1e4e8; background: #21262d; }
+  .player-mode-tab:disabled { color: #484f58; cursor: not-allowed; background: transparent; opacity: 0.6; }
+  .player-mode-tab .pm-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; border-radius: 8px; background: #30363d; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle; }
   .player-mode-content { display: none; }
   .player-mode-content.active { display: block; }
 
@@ -1084,6 +1086,7 @@ function renderPlayer(allAds) {
         <div class="player-mode-tabs">
           ${hasMedia ? '<button class="player-mode-tab" data-mode="direct" onclick="switchPlayerMode(this)">Direct Player</button>' : ''}
           <button class="player-mode-tab active" data-mode="ima" onclick="switchPlayerMode(this)">IMA SDK Player</button>
+          <button class="player-mode-tab" data-mode="taboola" disabled title="Taboola OVA player library not yet loaded">Taboola Player<span class="pm-badge">Soon</span></button>
         </div>
 
         <!-- Direct Player Mode -->
@@ -1127,6 +1130,32 @@ function renderPlayer(allAds) {
               <div class="player-meta">${metaHtml}</div>
               <div class="player-select-label" style="margin-top:14px">IMA SDK Events</div>
               <div class="player-events" id="ima-events"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Taboola Player Mode (disabled until OVA library is loaded) -->
+        <div id="player-taboola" class="player-mode-content">
+          <div class="player-wrapper">
+            <div class="player-video-area">
+              <div class="ima-player-wrap" id="taboola-player-wrap">
+                <video id="taboola-content-player" playsinline></video>
+                <div id="taboola-ad-container" class="ima-ad-container"></div>
+              </div>
+              <div class="ima-controls">
+                <button class="ima-btn ima-btn-play" id="taboola-play-btn" disabled>Load &amp; Play Ad</button>
+                <button class="ima-btn" disabled>Reset</button>
+                <span class="ima-status" id="taboola-status">Taboola OVA library not loaded</span>
+              </div>
+              <div class="ima-note">
+                Taboola OVA player integration is pending — drop the OVA library in and wire up
+                <code>initTaboolaPlayer()</code> / <code>taboolaRequestAds()</code> to enable this tab.
+              </div>
+            </div>
+            <div class="player-sidebar">
+              <div class="player-meta">${metaHtml}</div>
+              <div class="player-select-label" style="margin-top:14px">Taboola Player Events</div>
+              <div class="player-events" id="taboola-events"></div>
             </div>
           </div>
         </div>
@@ -1190,6 +1219,7 @@ function switchRendition() {
 }
 
 function switchPlayerMode(tab) {
+  if (tab.disabled) return;
   const tabs = tab.parentElement.querySelectorAll('.player-mode-tab');
   tabs.forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
