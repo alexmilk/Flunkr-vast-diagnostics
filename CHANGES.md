@@ -4,6 +4,8 @@
 - **NEW** Added gear icon to header title
 - **NEW** Added BETA badge to header
 - **NEW** Added Changes Log dialog and CHANGES.md file
+- **REMOVED** Geo Map view from Tracking Domain Map — endpoint locations could not be reliably resolved (most ad-tech traffic terminates at CDN edges, making the markers misleading)
+- **IMPROVED** Tracking Domain Map radial view — domain nodes are now donut charts whose arc segments show the per-domain event-type breakdown (3rd visual aspect alongside ring distance and node size); added curved category-colored links, glow-lit core, guide rings, and inline domain labels
 
 ## April 20, 2026
 - **NEW** Initial release of Flunkr - VAST/VPAID Diagnostics Tool

@@ -1,0 +1,5 @@
+2026-05-11T08:11:18.709Z | INFO | Starting MCP MySQL server from: /Users/alex.m/.npm/_npx/080bc9f59514dad9/node_modules/@liangshanli/mcp-server-mysql/src/server-final.js
+2026-05-11T08:11:18.712Z | INFO | Starting MCP MySQL server with environment: | {"MYSQL_HOST":"proxysql-office.taboolasyndication.com","MYSQL_PORT":"6033","MYSQL_USER":"alex.m","MYSQL_DATABASE":"","READONLY":"false","ALLOW_DDL":"false","ALLOW_DROP":"false","ALLOW_DELETE":"false","TOOL_PREFIX":"(not set)","PROJECT_NAME":"(not set)","MCP_LOG_DIR":"./.setting","MCP_DDL_LOG_FILE":"ddl.sql"}
+2026-05-11T08:11:18.716Z | INFO | MCP MySQL server process started with PID: 50603
+2026-05-11T08:11:18.716Z | INFO | Signal handlers registered for SIGINT and SIGTERM
+2026-05-11T08:11:18.716Z | INFO | Press Ctrl+C to gracefully shutdown the server

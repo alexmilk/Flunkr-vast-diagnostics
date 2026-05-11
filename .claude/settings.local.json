@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check /Users/alex.m/Projects/Flunkr-vast-diagnostics/index.html)",
+      "Bash(grep -v \"^<script>\\\\|^</script>$\")",
+      "Bash(node --check /tmp/flunkr.js)",
+      "Bash(node --check /tmp/flunkr2.js)"
+    ]
+  }
+}

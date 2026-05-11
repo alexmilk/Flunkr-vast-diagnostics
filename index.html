@@ -6,8 +6,6 @@
 <title>Flunkr - VAST/VPAID Diagnostics Tool</title>
 <link rel="icon" type="image/png" href="data/images/gear.png">
 <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; padding-top: 56px; }
@@ -41,6 +39,7 @@
   .cl-new { background: #1a7f3722; color: #3fb950; border: 1px solid #3fb95044; }
   .cl-improved { background: #1f6feb22; color: #79c0ff; border: 1px solid #79c0ff44; }
   .cl-changed { background: #d2992222; color: #d29922; border: 1px solid #d2992244; }
+  .cl-removed { background: #f8514922; color: #f85149; border: 1px solid #f8514944; }
   .input-section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
   .tabs { display: flex; gap: 0; margin-bottom: 16px; }
   .tab { padding: 8px 16px; background: transparent; border: 1px solid #30363d; color: #8b949e; cursor: pointer; font-size: 13px; transition: all 0.15s; }
@@ -181,38 +180,19 @@
 
   /* Tracking domain map */
   .domain-map { padding: 20px; }
-  .domain-map-canvas { width: 100%; min-height: 300px; background: #0d1117; border-radius: 6px; overflow: hidden; position: relative; }
-  .domain-map svg { width: 100%; height: 100%; }
-  .domain-view-toggle { display: inline-flex; gap: 0; margin-bottom: 12px; }
-  .domain-view-toggle button { padding: 6px 14px; background: transparent; border: 1px solid #30363d; color: #8b949e; cursor: pointer; font-size: 12px; transition: all 0.15s; }
-  .domain-view-toggle button:first-child { border-radius: 5px 0 0 5px; }
-  .domain-view-toggle button:last-child { border-radius: 0 5px 5px 0; }
-  .domain-view-toggle button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-  .domain-view-toggle button:hover:not(.active) { color: #e1e4e8; background: #21262d; }
-  .domain-view-panel { display: none; }
-  .domain-view-panel.active { display: block; }
-  .domain-geo-map { width: 100%; height: 460px; background: #0d1117; border-radius: 6px; overflow: hidden; }
-  .domain-geo-status { font-size: 12px; color: #8b949e; margin-top: 8px; line-height: 1.6; }
-  .leaflet-container { background: #0d1117; }
-  .leaflet-popup-content-wrapper { background: #161b22; color: #e1e4e8; border: 1px solid #30363d; border-radius: 6px; }
-  .leaflet-popup-tip { background: #161b22; }
-  .leaflet-popup-content { font-size: 12px; line-height: 1.6; margin: 10px 12px; }
-  .leaflet-popup-content strong { color: #e1e4e8; }
-  .leaflet-popup-content .geo-popup-domain { color: #58a6ff; font-weight: 600; word-break: break-all; }
-  .leaflet-popup-content .geo-popup-meta { color: #8b949e; font-size: 11px; margin-top: 4px; }
-  .leaflet-popup-close-button { color: #8b949e !important; }
-  .leaflet-control-attribution { background: rgba(13, 17, 23, 0.8) !important; color: #8b949e !important; }
-  .leaflet-control-attribution a { color: #58a6ff !important; }
-  .leaflet-control-zoom a { background: #161b22 !important; color: #e1e4e8 !important; border-color: #30363d !important; }
-  .leaflet-control-zoom a:hover { background: #21262d !important; }
+  .domain-map-canvas { width: 100%; min-height: 300px; background: radial-gradient(ellipse at center, #11161f 0%, #0d1117 70%); border-radius: 6px; overflow: hidden; position: relative; }
+  .domain-map svg { width: 100%; height: 100%; display: block; }
   .domain-node { cursor: default; }
-  .domain-node circle { transition: r 0.2s; }
-  .domain-node:hover circle { filter: brightness(1.3); }
+  .domain-node .donut-arc { transition: opacity 0.15s, filter 0.15s; }
+  .domain-node:hover .donut-arc { filter: brightness(1.35); }
+  .domain-node:hover .node-label { fill: #fff; font-weight: 600; }
   .domain-node text { fill: #e1e4e8; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; pointer-events: none; }
-  .domain-link { stroke-opacity: 0.4; }
+  .domain-link { fill: none; stroke-opacity: 0.35; transition: stroke-opacity 0.15s; }
+  .domain-link:hover { stroke-opacity: 0.8; }
   .domain-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; padding: 0 4px; }
   .domain-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8b949e; }
   .domain-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .domain-map-caption { font-size: 11px; color: #6e7681; margin-top: 10px; line-height: 1.6; padding: 0 4px; }
 </style>
 </head>
 <body>
@@ -303,6 +283,8 @@
         <li><span class="cl-tag cl-new">NEW</span> Added gear icon to header title</li>
         <li><span class="cl-tag cl-new">NEW</span> Added BETA badge to header</li>
         <li><span class="cl-tag cl-new">NEW</span> Added Changes Log dialog</li>
+        <li><span class="cl-tag cl-removed">REMOVED</span> Geo Map view from Tracking Domain Map — endpoints resolved to CDN edges, not vendor datacenters, so markers were misleading</li>
+        <li><span class="cl-tag cl-improved">IMPROVED</span> Tracking Domain Map radial view — domain nodes are now donut charts showing per-domain event-type breakdown, with curved links, glow-lit core, and guide rings</li>
       </ul>
 
       <h3>April 20, 2026</h3>
@@ -934,27 +916,32 @@ function renderTrackingDomainMap(allAds) {
     'Other': '#8b949e'
   };
 
-  // Build SVG force-directed-like layout
-  const width = 800;
-  const height = Math.max(350, domains.length * 28);
+  // --- Radial layout ---
+  // Three encoded aspects per domain:
+  //   1. RING POSITION  — high-volume domains sit closer to the VAST core
+  //   2. DONUT SIZE     — outer radius scales with total call count (sqrt-scaled)
+  //   3. DONUT SEGMENTS — each ring is split into arcs proportional to per-type counts
+  const width = 820;
+  const height = Math.max(420, 220 + domains.length * 26);
   const centerX = width / 2;
   const centerY = height / 2;
-
-  // The VAST tag is the center node
   const maxCount = Math.max(...domains.map(d => d.count));
+  const innerRadius = 110;                       // distance of closest domain ring
+  const outerRadius = Math.min(width, height) * 0.42;  // distance of lowest-volume domain ring
 
-  // Position domains in a radial layout
   const nodes = domains.map((d, i) => {
     const angle = (2 * Math.PI * i) / domains.length - Math.PI / 2;
-    const radiusBase = Math.min(width, height) * 0.35;
-    // Larger count = closer to center
-    const distanceFactor = 0.5 + 0.5 * (1 - d.count / maxCount);
-    const r = radiusBase * distanceFactor + 40;
+    // Larger count → closer to center. Use sqrt for a gentler spread.
+    const t = 1 - Math.sqrt(d.count / maxCount);
+    const r = innerRadius + (outerRadius - innerRadius) * t;
+    const size = Math.max(14, Math.min(34, 10 + Math.sqrt(d.count) * 4));
     return {
       ...d,
+      angle,
       x: centerX + r * Math.cos(angle),
       y: centerY + r * Math.sin(angle),
-      radius: Math.max(8, Math.min(30, 6 + d.count * 2)),
+      outer: size,
+      inner: size * 0.55,
       primaryType: Object.entries(d.types).sort((a, b) => b[1] - a[1])[0][0]
     };
   });
@@ -962,47 +949,101 @@ function renderTrackingDomainMap(allAds) {
   // Build SVG
   let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<defs>
-    <filter id="glow"><feGaussianBlur stdDeviation="2" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1f6feb" stop-opacity="0.35"/><stop offset="100%" stop-color="#1f6feb" stop-opacity="0"/></radialGradient>
   </defs>`;
 
-  // Center node (VAST Tag)
-  svg += `<circle cx="${centerX}" cy="${centerY}" r="22" fill="#161b22" stroke="#1f6feb" stroke-width="2" filter="url(#glow)"/>`;
-  svg += `<text x="${centerX}" y="${centerY + 1}" text-anchor="middle" dominant-baseline="middle" fill="#1f6feb" font-size="10" font-weight="600" font-family="-apple-system, sans-serif">VAST</text>`;
+  // Faint guide rings (inner & outer) — visual reference for the volume axis
+  svg += `<circle cx="${centerX}" cy="${centerY}" r="${innerRadius}" fill="none" stroke="#21262d" stroke-width="1" stroke-dasharray="2 4"/>`;
+  svg += `<circle cx="${centerX}" cy="${centerY}" r="${outerRadius}" fill="none" stroke="#21262d" stroke-width="1" stroke-dasharray="2 4"/>`;
 
-  // Links from center to each domain
+  // Curved links from center to each domain (gentle Bezier toward each node's angle)
   nodes.forEach(node => {
-    const color = categoryColors[node.primaryType] || categoryColors['Other'];
-    // Draw multiple lines for multiple event types (stacked, slight offset)
     const types = Object.entries(node.types).sort((a, b) => b[1] - a[1]);
+    // One curved path per category, colored by category, width by per-type count
+    const baseSpread = 6;
     types.forEach(([ type, count ], ti) => {
-      const offset = (ti - (types.length - 1) / 2) * 1.5;
-      const opacity = Math.max(0.15, 0.6 - ti * 0.15);
-      const strokeWidth = Math.max(1, Math.min(4, count * 0.5));
       const c = categoryColors[type] || categoryColors['Other'];
-      svg += `<line class="domain-link" x1="${centerX}" y1="${centerY}" x2="${node.x}" y2="${node.y + offset}" stroke="${c}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"/>`;
+      const offset = (ti - (types.length - 1) / 2) * baseSpread;
+      const strokeWidth = Math.max(1, Math.min(3.5, count * 0.45));
+      const opacity = Math.max(0.18, 0.55 - ti * 0.1);
+      // Perpendicular offset for stacked arcs
+      const px = -Math.sin(node.angle) * offset;
+      const py = Math.cos(node.angle) * offset;
+      // Control point: halfway out, perpendicular nudge for curvature
+      const midX = centerX + (node.x - centerX) * 0.55 + px * 3;
+      const midY = centerY + (node.y - centerY) * 0.55 + py * 3;
+      svg += `<path class="domain-link" d="M ${centerX} ${centerY} Q ${midX} ${midY} ${node.x + px} ${node.y + py}" stroke="${c}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"/>`;
     });
   });
 
-  // Domain nodes
+  // Center VAST core with halo
+  svg += `<circle cx="${centerX}" cy="${centerY}" r="48" fill="url(#coreGrad)"/>`;
+  svg += `<circle cx="${centerX}" cy="${centerY}" r="26" fill="#161b22" stroke="#1f6feb" stroke-width="2" filter="url(#glow)"/>`;
+  svg += `<text x="${centerX}" y="${centerY - 2}" text-anchor="middle" dominant-baseline="middle" fill="#58a6ff" font-size="11" font-weight="700" font-family="-apple-system, sans-serif" letter-spacing="1">VAST</text>`;
+  svg += `<text x="${centerX}" y="${centerY + 10}" text-anchor="middle" dominant-baseline="middle" fill="#6e7681" font-size="9" font-family="-apple-system, sans-serif">${domains.length} hosts</text>`;
+
+  // Domain donut nodes — each segment encodes a per-domain event-type breakdown
   nodes.forEach(node => {
-    const color = categoryColors[node.primaryType] || categoryColors['Other'];
+    const types = Object.entries(node.types).sort((a, b) => b[1] - a[1]);
+    const primaryColor = categoryColors[node.primaryType] || categoryColors['Other'];
     svg += `<g class="domain-node">`;
-    svg += `<circle cx="${node.x}" cy="${node.y}" r="${node.radius}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="1.5"/>`;
-    svg += `<text x="${node.x}" y="${node.y - node.radius - 5}" text-anchor="middle" fill="#e1e4e8" font-size="10" font-family="-apple-system, sans-serif">${escapeHtml(node.domain)}</text>`;
-    svg += `<text x="${node.x}" y="${node.y + 4}" text-anchor="middle" fill="${color}" font-size="11" font-weight="600" font-family="-apple-system, sans-serif">${node.count}</text>`;
+
+    if (types.length === 1) {
+      // Single category — render as a clean ring
+      const c = categoryColors[types[0][0]] || categoryColors['Other'];
+      svg += `<circle class="donut-arc" cx="${node.x}" cy="${node.y}" r="${node.outer}" fill="${c}" fill-opacity="0.18" stroke="${c}" stroke-width="2"/>`;
+      svg += `<circle cx="${node.x}" cy="${node.y}" r="${node.inner}" fill="#0d1117" stroke="${c}" stroke-width="1" stroke-opacity="0.4"/>`;
+    } else {
+      // Multi-category — donut with arc-per-category
+      let acc = -Math.PI / 2; // start at top
+      types.forEach(([ type, count ]) => {
+        const c = categoryColors[type] || categoryColors['Other'];
+        const slice = (count / node.count) * Math.PI * 2;
+        const a0 = acc;
+        const a1 = acc + slice;
+        const largeArc = slice > Math.PI ? 1 : 0;
+        const r0 = node.inner;
+        const r1 = node.outer;
+        const x0o = node.x + r1 * Math.cos(a0), y0o = node.y + r1 * Math.sin(a0);
+        const x1o = node.x + r1 * Math.cos(a1), y1o = node.y + r1 * Math.sin(a1);
+        const x0i = node.x + r0 * Math.cos(a1), y0i = node.y + r0 * Math.sin(a1);
+        const x1i = node.x + r0 * Math.cos(a0), y1i = node.y + r0 * Math.sin(a0);
+        const path = `M ${x0o} ${y0o} A ${r1} ${r1} 0 ${largeArc} 1 ${x1o} ${y1o} L ${x0i} ${y0i} A ${r0} ${r0} 0 ${largeArc} 0 ${x1i} ${y1i} Z`;
+        svg += `<path class="donut-arc" d="${path}" fill="${c}" fill-opacity="0.55" stroke="#0d1117" stroke-width="1"><title>${escapeHtml(type)}: ${count}</title></path>`;
+        acc = a1;
+      });
+      // Inner disc to crisp the hole
+      svg += `<circle cx="${node.x}" cy="${node.y}" r="${node.inner}" fill="#0d1117" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.35"/>`;
+    }
+
+    // Count in the donut hole
+    svg += `<text x="${node.x}" y="${node.y + 4}" text-anchor="middle" fill="#e1e4e8" font-size="${Math.max(10, node.inner * 0.55)}" font-weight="700" font-family="-apple-system, sans-serif">${node.count}</text>`;
+
+    // Domain label — placed outside the node on the side facing away from center
+    const labelDist = node.outer + 14;
+    const lx = node.x + labelDist * Math.cos(node.angle);
+    const ly = node.y + labelDist * Math.sin(node.angle);
+    const anchor = Math.cos(node.angle) > 0.2 ? 'start' : (Math.cos(node.angle) < -0.2 ? 'end' : 'middle');
+    const label = node.domain.length > 28 ? node.domain.slice(0, 27) + '…' : node.domain;
+    svg += `<text class="node-label" x="${lx}" y="${ly + 3}" text-anchor="${anchor}" fill="#c9d1d9" font-size="10" font-family="-apple-system, sans-serif">${escapeHtml(label)}</text>`;
+
+    svg += `<title>${escapeHtml(node.domain)} — ${node.count} call(s)</title>`;
     svg += `</g>`;
   });
 
   svg += `</svg>`;
 
-  // Legend
+  // Legend — show every category that appears in the data
   let legendHtml = '<div class="domain-legend">';
   Object.entries(categoryColors).forEach(([cat, color]) => {
-    if (categories.has(cat) || cat === 'Media' || cat === 'Impression') {
+    if (categories.has(cat)) {
       legendHtml += `<div class="domain-legend-item"><div class="domain-legend-dot" style="background:${color}"></div>${cat}</div>`;
     }
   });
   legendHtml += '</div>';
+
+  const captionHtml = `<div class="domain-map-caption">Ring position: closer = higher call volume · Donut size: total calls (√-scaled) · Segments: per-type breakdown</div>`;
 
   // Domain summary table
   let tableHtml = `<table style="margin-top:16px"><thead><tr><th>Domain</th><th>Calls</th><th>Types</th></tr></thead><tbody>`;
@@ -1021,179 +1062,15 @@ function renderTrackingDomainMap(allAds) {
     </div>
     <div class="section-body">
       <div class="domain-map">
-        <div class="domain-view-toggle">
-          <button class="active" data-view="radial" onclick="switchDomainView(this)">Radial</button>
-          <button data-view="geo" onclick="switchDomainView(this)">Geo Map</button>
-        </div>
-        <div class="domain-view-panel active" data-panel="radial">
-          <div class="domain-map-canvas">${svg}</div>
-          ${legendHtml}
-        </div>
-        <div class="domain-view-panel" data-panel="geo">
-          <div class="domain-geo-map" id="domain-geo-map"></div>
-          <div class="domain-geo-status" id="domain-geo-status">Click "Geo Map" to resolve domains and plot their probable locations (uses public DNS-over-HTTPS + GeoIP). Note: most ad-tech traffic terminates at CDN edges (Cloudflare/Akamai/Fastly) — these markers reflect the resolved edge, not the vendor's actual datacenter.</div>
-        </div>
+        <div class="domain-map-canvas">${svg}</div>
+        ${legendHtml}
+        ${captionHtml}
         ${tableHtml}
       </div>
     </div>
   </div>`;
 
   document.getElementById('tracking-map-section').innerHTML = html;
-
-  // Stash domain list + colors on the section so the geo renderer can pick it up on demand
-  const sectionEl = document.getElementById('tracking-map-section');
-  sectionEl._domainData = { domains, categoryColors };
-}
-
-// --- Domain view toggle (radial ↔ geo) ---
-function switchDomainView(btn) {
-  const wrap = btn.closest('.domain-map');
-  wrap.querySelectorAll('.domain-view-toggle button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  wrap.querySelectorAll('.domain-view-panel').forEach(p => p.classList.remove('active'));
-  wrap.querySelector(`.domain-view-panel[data-panel="${btn.dataset.view}"]`).classList.add('active');
-  if (btn.dataset.view === 'geo') {
-    renderGeoMap();
-  }
-}
-
-// --- Geo map state ---
-let geoMapInstance = null;
-const geoIpCache = {};   // hostname -> { ip, lat, lon, city, country, asn } | { error }
-
-async function resolveHostIp(hostname) {
-  try {
-    const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=A`, {
-      headers: { 'Accept': 'application/dns-json' }
-    });
-    if (!r.ok) return null;
-    const j = await r.json();
-    const ans = (j.Answer || []).find(a => a.type === 1);
-    return ans ? ans.data : null;
-  } catch (e) {
-    return null;
-  }
-}
-
-async function geoLookupIp(ip) {
-  try {
-    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    if (!j.success) return null;
-    return {
-      lat: j.latitude,
-      lon: j.longitude,
-      city: j.city,
-      country: j.country,
-      countryCode: j.country_code,
-      asn: j.connection && j.connection.org ? j.connection.org : (j.connection && j.connection.isp) || ''
-    };
-  } catch (e) {
-    return null;
-  }
-}
-
-async function renderGeoMap() {
-  const sectionEl = document.getElementById('tracking-map-section');
-  const data = sectionEl && sectionEl._domainData;
-  if (!data) return;
-  const { domains, categoryColors } = data;
-
-  const mapEl = document.getElementById('domain-geo-map');
-  const statusEl = document.getElementById('domain-geo-status');
-  if (!mapEl) return;
-
-  if (typeof L === 'undefined') {
-    statusEl.textContent = 'Leaflet failed to load — check network connectivity to unpkg.com.';
-    return;
-  }
-
-  // Initialize map once
-  if (!geoMapInstance || geoMapInstance._container !== mapEl) {
-    if (geoMapInstance) { try { geoMapInstance.remove(); } catch(e) {} }
-    geoMapInstance = L.map(mapEl, { worldCopyJump: true, minZoom: 2 }).setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(geoMapInstance);
-  } else {
-    geoMapInstance.eachLayer(layer => {
-      if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
-        geoMapInstance.removeLayer(layer);
-      }
-    });
-  }
-
-  // Fix Leaflet sizing inside the (initially-hidden) panel
-  setTimeout(() => { if (geoMapInstance) geoMapInstance.invalidateSize(); }, 50);
-
-  statusEl.textContent = `Resolving ${domains.length} domain(s)…`;
-
-  // Resolve with limited concurrency
-  const concurrency = 5;
-  let done = 0;
-  const queue = [...domains];
-  const markers = [];
-
-  async function worker() {
-    while (queue.length) {
-      const d = queue.shift();
-      const host = d.domain;
-      let info = geoIpCache[host];
-      if (!info) {
-        const ip = await resolveHostIp(host);
-        if (!ip) {
-          info = { error: 'DNS lookup failed' };
-        } else {
-          const geo = await geoLookupIp(ip);
-          info = geo ? { ip, ...geo } : { ip, error: 'GeoIP lookup failed' };
-        }
-        geoIpCache[host] = info;
-      }
-      done++;
-      statusEl.textContent = `Resolving ${done}/${domains.length}… ${info.error ? '(' + info.error + ': ' + host + ')' : ''}`;
-
-      if (!info.error && typeof info.lat === 'number' && typeof info.lon === 'number') {
-        const primaryType = Object.entries(d.types).sort((a, b) => b[1] - a[1])[0][0];
-        const color = categoryColors[primaryType] || categoryColors['Other'];
-        const radius = Math.max(6, Math.min(18, 5 + d.count * 1.5));
-        const marker = L.circleMarker([info.lat, info.lon], {
-          radius,
-          color,
-          weight: 2,
-          fillColor: color,
-          fillOpacity: 0.45
-        }).addTo(geoMapInstance);
-        const typeTags = Object.entries(d.types).sort((a, b) => b[1] - a[1])
-          .map(([t, c]) => `${t} (${c})`).join(', ');
-        marker.bindPopup(
-          `<div class="geo-popup-domain">${escapeHtml(host)}</div>` +
-          `<div>${escapeHtml(info.city || '—')}, ${escapeHtml(info.country || '—')} (${escapeHtml(info.countryCode || '')})</div>` +
-          `<div class="geo-popup-meta">IP: ${escapeHtml(info.ip)}</div>` +
-          (info.asn ? `<div class="geo-popup-meta">${escapeHtml(info.asn)}</div>` : '') +
-          `<div class="geo-popup-meta">${d.count} call(s) — ${escapeHtml(typeTags)}</div>`
-        );
-        markers.push(marker);
-      }
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, domains.length) }, worker));
-
-  if (markers.length) {
-    const group = L.featureGroup(markers);
-    try {
-      geoMapInstance.fitBounds(group.getBounds().pad(0.2), { maxZoom: 5 });
-    } catch (e) {}
-    const failed = Object.values(geoIpCache).filter(v => v.error).length;
-    statusEl.textContent = `Plotted ${markers.length} of ${domains.length} domain(s)` +
-      (failed ? ` · ${failed} failed to resolve` : '') +
-      ' · Locations reflect resolved CDN edges, not vendor datacenters.';
-  } else {
-    statusEl.textContent = 'No domains could be resolved. Public DNS-over-HTTPS or GeoIP APIs may be blocked on this network.';
-  }
 }
 
 function categorizeEvent(type) {
