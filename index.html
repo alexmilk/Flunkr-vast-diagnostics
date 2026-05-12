@@ -12,9 +12,10 @@
   .navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #161b22; border-bottom: 1px solid #30363d; height: 56px; display: flex; align-items: center; padding: 0 24px; }
   .navbar-inner { max-width: 1200px; width: 100%; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
   .navbar-brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; color: #fff; text-decoration: none; }
-  .navbar-brand img { height: 26px; width: auto; animation: gear-spin 6s linear infinite; transform-origin: 50% 50%; }
+  .navbar-brand img { height: 26px; width: auto; transform-origin: 50% 50%; }
+  .navbar-brand img.spinning { animation: gear-spin 1.2s linear infinite; }
   @keyframes gear-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .navbar-brand img { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .navbar-brand img.spinning { animation: none; } }
   .beta-badge { font-size: 10px; font-weight: 600; background: #d29922; color: #0d1117; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; }
   .navbar-subtitle { font-size: 12px; color: #484f58; margin-left: 8px; }
   .navbar-spacer { flex: 1; }
@@ -341,6 +342,11 @@ function hideProgress() {
   document.getElementById('progress').style.display = 'none';
 }
 
+function setGearSpinning(on) {
+  const gear = document.querySelector('.navbar-brand img');
+  if (gear) gear.classList.toggle('spinning', !!on);
+}
+
 function showError(msg) {
   const c = document.getElementById('error-container');
   c.innerHTML += `<div class="error-box">${escapeHtml(msg)}</div>`;
@@ -567,11 +573,12 @@ async function runTest() {
       const url = document.getElementById('vast-url').value.trim();
       if (!url) { showError('Please enter a VAST tag URL.'); btn.disabled = false; return; }
 
+      setGearSpinning(true);
       setProgress('Fetching VAST tag...');
       const result = await timedFetch(url);
       if (!result.ok && !result.body) {
         showError(`Failed to fetch VAST tag: ${result.error || 'HTTP ' + result.status}. This is likely a CORS issue — try pasting the XML directly.`);
-        btn.disabled = false; hideProgress(); return;
+        btn.disabled = false; hideProgress(); setGearSpinning(false); return;
       }
       xmlString = result.body;
       totalFetchTime = result.total;
@@ -583,6 +590,7 @@ async function runTest() {
       if (!xmlString) { showError('Please paste VAST XML.'); btn.disabled = false; return; }
       testResults.vastXml = xmlString;
       testResults.wrapperChain.push({ url: '(pasted XML)', type: 'Pasted XML', ttfb: 0, total: 0, status: 200, size: xmlString.length, error: null });
+      setGearSpinning(true);
     }
 
     // Step 2: Parse and resolve wrapper chain
@@ -616,6 +624,8 @@ async function runTest() {
       }
       currentXml = wrapResult.body;
     }
+
+    setGearSpinning(false);
 
     // Collect all resources
     const allMedia = allAds.flatMap(a => a.mediaFiles);
@@ -667,6 +677,7 @@ async function runTest() {
 
   } catch (e) {
     hideProgress();
+    setGearSpinning(false);
     showError(e.message);
   }
 

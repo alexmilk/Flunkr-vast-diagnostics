@@ -40,3 +40,6 @@
 2026-05-12T04:49:21.751Z | connection_pool_closed | {} | SUCCESS | RESPONSE: {"status":"closed"}
 2026-05-12T04:49:21.764Z | connection_pool_recreate_error | {"error":"getaddrinfo ENOTFOUND proxysql-office.taboolasyndication.com"} | getaddrinfo ENOTFOUND proxysql-office.taboolasyndication.com | RESPONSE: null
 2026-05-12T04:49:21.764Z | health_check_error | {"error":"getaddrinfo ENOTFOUND proxysql-office.taboolasyndication.com"} | getaddrinfo ENOTFOUND proxysql-office.taboolasyndication.com | RESPONSE: null
+2026-05-12T05:20:14.148Z | connection_pool_closed | {} | SUCCESS | RESPONSE: {"status":"closed"}
+2026-05-12T05:20:24.156Z | connection_pool_recreate_error | {"error":"connect ETIMEDOUT"} | connect ETIMEDOUT | RESPONSE: null
+2026-05-12T05:20:24.159Z | health_check_error | {"error":"connect ETIMEDOUT"} | connect ETIMEDOUT | RESPONSE: null
