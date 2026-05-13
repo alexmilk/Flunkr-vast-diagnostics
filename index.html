@@ -733,11 +733,11 @@ function renderResults(allAds, totalFetchTime, wrapperDepth) {
     </div>
     <div class="summary-card">
       <div class="label">Avg Media TTFB</div>
-      <div class="value ${statusClass(avgMediaTtfb)}">${formatMs(avgMediaTtfb)}</div>
+      <div class="value ${statusClass(avgMediaTtfb)}${avgMediaTtfb > 1000 ? ' blink-red' : ''}">${formatMs(avgMediaTtfb)}</div>
     </div>
     <div class="summary-card">
       <div class="label">Slowest Resource</div>
-      <div class="value ${statusClass(Math.max(slowestMedia, totalFetchTime))}">${formatMs(Math.max(slowestMedia, totalFetchTime))}</div>
+      <div class="value ${statusClass(Math.max(slowestMedia, totalFetchTime))}${Math.max(slowestMedia, totalFetchTime) > 1000 ? ' blink-red' : ''}">${formatMs(Math.max(slowestMedia, totalFetchTime))}</div>
     </div>
     <div class="summary-card">
       <div class="label">Duration</div>
